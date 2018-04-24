@@ -1,0 +1,302 @@
+!DOCTYPE html>
+<html>
+<head>
+    <title>Monster Slayer</title>
+    <script src="https://npmcdn.com/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.4.3/css/foundation.min.css">
+    <style>
+    .text-center {
+        text-align: center;
+    }
+
+    .healthbar {
+        width: 80%;
+        height: 40px;
+        background-color: #eee;
+        margin: auto;
+        transition: width 500ms;
+    }
+
+    .controls, .log {
+        margin-top: 30px;
+        text-align: center;
+        padding: 10px;
+        border: 1px solid #ccc;
+        box-shadow: 0px 3px 6px #ccc;
+    }
+
+    .turn {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        font-size: 22px;
+    }
+
+    .log ul {
+        list-style: none;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .log ul li {
+        margin: 5px;
+    }
+
+    .log ul .player-turn {
+        color: blue;
+        background-color: #e4e8ff;
+    }
+
+    .log ul .monster-turn {
+        color: red;
+        background-color: #ffc0c1;
+    }
+
+    button {
+        font-size: 20px;
+        background-color: #eee;
+        padding: 12px;
+        box-shadow: 0 1px 1px black;
+        margin: 10px;
+    }
+
+    #start-game {
+        background-color: #aaffb0;
+    }
+
+    #start-game:hover {
+        background-color: #76ff7e;
+    }
+
+    #attack {
+        background-color: #ff7367;
+    }
+
+    #attack:hover {
+        background-color: #ff3f43;
+    }
+
+    #special-attack {
+        background-color: #ffaf4f;
+    }
+
+    #special-attack:hover {
+        background-color: #ff9a2b;
+    }
+
+    #heal {
+        background-color: #aaffb0;
+    }
+
+    #heal:hover {
+        background-color: #76ff7e;
+    }
+
+    #give-up {
+        background-color: #ffffff;
+    }
+
+    #give-up:hover {
+        background-color: #c7c7c7;
+    }
+    </style>
+</head>
+<body>
+<div id="app">
+    <section class="row">
+        <div class="small-6 columns">
+            <h1 class="text-center">YOU</h1>
+            <div class="healthbar">
+                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" :style="{'width': playerHealth + '%',
+                'background-color': playerBackground}">
+                  <div>{{playerHealth}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="small-6 columns">
+            <h1 class="text-center">MONSTER</h1>
+            <div class="healthbar">
+                <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;"  :style="{'width': monsterHealth + '%',
+              'background-color': monsterBackground}">
+                  <div>{{monsterHealth}}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="row controls" v-if="startButtonAvailable">
+        <div class="small-12 columns">
+            <button id="start-game" @click="clickedStartButton">START NEW GAME</button>
+        </div>
+    </section>
+    <section class="row controls" v-else>
+        <div class="small-12 columns">
+            <button id="attack" @click="normalAttack">ATTACK</button>
+            <button id="special-attack" @click="specialAttack">SPECIAL ATTACK</button>
+            <button id="heal" @click="heal">HEAL</button>
+            <button id="give-up" @click="giveUp">GIVE UP</button>
+        </div>
+    </section>
+    <section class="row log">
+        <div class="small-12 columns">
+            <ul>
+              <li v-for="lineOfLog in theMessageLog" :class="{'player-turn': lineOfLog.type == 'playerLog', 'monster-turn': lineOfLog.type == 'monsterLog'}">
+                {{ lineOfLog.msg }}
+                </li>
+            </ul>
+        </div>
+    </section>
+</div>
+<script>
+new Vue({
+  el: '#app',
+  data: {
+    startButtonAvailable: true,
+    startNewGame: false,
+    playerHealth: 100,
+    monsterHealth: 100,
+    theMessageLog: []
+  },
+  methods: {
+
+    //What happens when we click it
+    clickedStartButton: function()
+    {
+      this.startButtonAvailable = false;
+      this.startNewGame = true;
+    },
+
+    demandAnotherGame: function()
+    {
+      if(confirm("Play another game?"))
+      {
+        this.startNewGame = true;
+      }
+    },
+
+    //Common to both attacks
+    performAttack: function(minPlayer, maxPlayer, minMonster, maxMonster, msgPlayer, msgMonster, isHeal)
+    {
+      //Since optional parameter
+      isHeal = isHeal || false;
+
+      var playerHit = this.generateRandom(minPlayer, maxPlayer);
+      var monsterHit = this.generateRandom(minMonster, maxMonster);
+
+      if(isHeal)
+      {
+        this.playerHealth += playerHit;
+        if(this.playerHealth > 100)
+        {
+          this.playerHealth = 100;
+        }
+        this.playerHealth -= monsterHit;
+      }
+      else
+      {
+        this.monsterHealth -= playerHit;
+        this.playerHealth -= monsterHit;
+      }
+
+      this.theMessageLog.unshift({type: 'monsterLog', msg: msgMonster + monsterHit + " points."});
+      this.theMessageLog.unshift({type: 'playerLog', msg: msgPlayer + playerHit + " points."});
+
+    },
+
+    generateRandom: function(min, max)
+    {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    },
+
+    //Normal attack on monster random 1 to 5, monster 2 to 8
+    normalAttack: function()
+    {
+      this.performAttack(1, 5, 2, 8,"Player normal attacks monster for ", "Monster normal attacks player for ", false);
+    },
+    specialAttack: function()
+    {
+      this.performAttack(5, 10, 5, 15,"Player SPECIAL attacks monster for ", "Monster SPECIAL attacks player for ", false);
+    },
+    heal: function()
+    {
+      this.performAttack(2, 15, 2, 8,"Player HEALS himself for ", "Monster normal attacks player for ", true);
+    },
+    giveUp: function()
+    {
+      this.startButtonAvailable = true;
+    },
+
+    colorDetermination: function(theHealth)
+    {
+      if(theHealth > 40)
+      {
+        return "green";
+      }
+
+      if(theHealth <= 40 && theHealth > 20)
+      {
+        return "red";
+      }
+
+      if(theHealth <= 20)
+      {
+        return "brown";
+      }
+
+      if(theHealth < 1)
+      {
+        return "black";
+      }
+    }
+
+  },
+  watch: {
+    playerHealth: function(theValue)
+    {
+      if(theValue < 1)
+      {
+        alert("Player is dead!");
+        this.startButtonAvailable = true;
+        this.demandAnotherGame();
+      }
+    },
+    monsterHealth: function(theValue)
+    {
+      if(theValue < 1)
+      {
+        alert("Monster is dead!");
+        this.startButtonAvailable = true;
+        this.demandAnotherGame();
+      }
+
+    },
+    startNewGame: function(theValue)
+    {
+      //Reset all data and prepare the screen for a new game
+      if(theValue)
+      {
+        this.playerHealth = 100;
+        this.monsterHealth = 100;
+
+        this.theMessageLog = [];
+        //Not a new game, and remove start button
+        this.startButtonAvailable = false;
+        this.startNewGame = false;
+      }
+    },
+  },
+  computed: {
+    playerBackground: function()
+    {
+      //note the double return that is happening: first function returns value, we need to return again!
+      return this.colorDetermination(this.playerHealth);
+    },
+    monsterBackground: function()
+    {
+      return this.colorDetermination(this.monsterHealth);
+    }
+  },
+});
+
+</script>
+</body>
+</html>
